@@ -6,7 +6,7 @@ have not signed our contributor license agreement (CLA), our bot will update
 the issue when you open a Pull Request. For any questions about the CLA 
 process, please refer to our [FAQ](https://cla.vmware.com/faq).
 
-## CHANGELOG 
+## CHANGELOG
 
 Authors are expected to include a changelog file with their pull requests. The changelog file
 should be a new file created in the `changelogs/unreleased` folder. The file should follow the
