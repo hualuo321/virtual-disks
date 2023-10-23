@@ -9,33 +9,31 @@
 </div>
 
 # Virtual Disks
+Go Library for Virtual Disk Development Kit (a.k.a. virtual-disks) 是一个 Golang 包装器，用于访问 VMware 虚拟磁盘开发套件 API (VDDK)，该 API 是一个 SDK，可帮助开发人员创建访问虚拟机上存储的应用程序。
 
-Go Library for Virtual Disk Development Kit (a.k.a. virtual-disks) is a Golang 
-wrapper to access the VMware Virtual Disk Development Kit API (VDDK), which 
-is a SDK to help developers create applications that access storage on virtual 
-machines. Virtual-disks provide two level apis to user:
+虚拟磁盘为用户提供两级API：
 
-* Low level api, which expose all VDDK apis directly in Golang.
-* High level api, which provide some common used functionalities to user, such as IO read and write.
+* 低级 API，直接在 Golang 中公开所有 VDDK API。
+* 高级 API，为用户提供一些常用的功能，例如 IO 读写。
 
-User can choose to either use main functionality via high level api, or use low level api to implement his own function combination.
+用户可以选择通过高级 API 使用主要功能，或者使用低级 API 来实现自己的功能组合。
 
 # Dependency
-Virtual-disks needs the Virtual Disk Development Kit (VDDK) to connect with 
-vSphere.
-The VDDK can be downloaded from here: https://code.vmware.com/web/sdk/7.0/vddk.  Virtual-disks requires the 7.0.0 VDDK release.
-After installing, please untar into the /usr/local/ directory:
+Virtual-disks 需要 Virtual Disk Development Kit (VDDK) 才能与 vSphere 连接。
 
-```
+可以从此处下载 VDDK：[https://code.vmware.com/web/sdk/7.0/vddk](https://code.vmware.com/web/sdk/7.0/vddk)。虚拟磁盘需要 7.0.0 VDDK 版本。
+
+安装完成后，解压到 `/usr/local/` 目录：
+```shell
 > cd /usr/local
 
 > sudo tar xzf <path to VMware-vix-disklib-*version*.x86_64.tar.gz>.
 ```
 
-VDDK is free to use for personal and internal use.  Redistribution requires a no-fee license, please contact VMware to 
-obtain the license.
+VDDK 可免费供个人和内部使用。重新分发需要免费许可证，请联系 VMware
+获得许可证。
 
-Required Linux library packages are listed below:
+下面列出了所需的 Linux 库包：
 
 Ubuntu:
 * libc6
@@ -65,57 +63,60 @@ Centos:
 * zlib
 
 # Use cases
-Virtual-disks provides access to virtual disks, enabling a range of use cases for application vendors including:
-* Back up a particular volume, or all volumes, associated with a virtual machine.
-* Get IO Reader and Writer for a vmbk file.
-* Connect a backup proxy to vSphere and back up all virtual machines on a storage cluster.
-* Manipulate virtual disks to defragment, expand, convert, rename, or shrink the file system image.
-* Attach child disk chain to parent disk chain.
+Virtual-disks 提供对 virtual disks 的访问, 为应用程序供应商提供一系列用例，包括：
+* 备份与虚拟机关联的特定卷或所有卷。
+* 获取 vmbk 文件的 IO Reader 和 Writer。
+* 将备份代理连接到 vSphere 并备份存储集群上的所有虚拟机。
+* 操作 virtual disks 以进行碎片整理、扩展、转换、重命名或缩小文件系统映像。
+* 将子磁盘链附加到父磁盘链。
+
+在虚拟机备份中，获取 vmbk 文件的 IO Reader 和 Writer 主要用于读取虚拟机备份数据并将其写入备份存储目标。
+1. 读取备份数据（IO Reader）：
+	- 读取虚拟机的磁盘镜像数据：IO Reader 会读取虚拟机的磁盘数据，包括虚拟机的主磁盘和任何附加磁盘。
+	- 读取虚拟机配置信息：IO Reader 还可能读取虚拟机的配置信息，例如虚拟机的硬件设置、网络配置等。
+2. 写入备份数据（IO Writer）：
+	- 将备份数据写入备份存储目标：IO Writer 用于将从虚拟机读取的数据写入备份存储设备，例如磁盘、云存储等。
+	- 组织备份数据：IO Writer 负责将备份数据按照特定的备份格式或协议进行组织和写入，以确保备份数据的完整性和可还原性。
+
+在虚拟机备份中，将子磁盘链附加到父磁盘链是一种备份策略，通常用于创建完整的虚拟机备份。
+1. 创建完整备份：虚拟机通常包含一个主虚拟磁盘和多个附加虚拟磁盘。将子磁盘链附加到父磁盘链可以确保备份包含了虚拟机的所有数据。
+2. 数据一致性：通过将子磁盘链附加到父磁盘链，可以确保备份捕获了虚拟机中所有磁盘的一致状态，避免了恢复虚拟机时数据不一致的问题。
+3. 简化备份管理：只需要备份一个完整的虚拟机实例，而不是分别备份每个磁盘。
+4. 快速还原：当需要还原虚拟机时，备份包含了所有磁盘的完整镜像，可以更快速地还原整个虚拟机。
 
 # Low level API
 ## Set up
 ### Init
 ```$xslt
 /**
- * Initialize the library. Must be called at the 
- * beginning of program. Should be called only once 
- * per process. Should call Exit at the end of program
- * for clean up.
+ * 初始化库。
+ * 必须在程序开始时调用，每个进程只应调用一次，应在程序结束时调用 Exit 进行清理。
  */
 func Init(majorVersion uint32, minorVersion uint32, dir string) VddkError {}
 ```
 ### PrepareForAccess
 ```$xslt
 /**
- * Notify a host to refrain from relocating a virtual machine.
- * Every PrepareForAccess call should have a matching EndAccess
- * call.
+ * 通知主机不要重新定位虚拟机。
+ * 每个 PrepareForAccess 调用都应该有一个匹配的 EndAccess 调用。
  */
 func PrepareForAccess(appGlobal ConnectParams) VddkError {}
 ```
 ### Connect
 ```$xslt
 /**
- * Connect the library to local/remote server. 
- * Always call Disconnect before end of 
- * program, which invalidates any open file handles.
- * VixDiskLib_PrepareForAccess should be called 
- * before each Connect.
+ * 将库连接到本地/远程服务器。
+ * 始终在程序结束之前调用 Disconnect，这会使任何打开的文件句柄无效。
+ * VixDiskLib_PrepareForAccess 应在每次连接之前调用。
  */
 func Connect(appGlobal ConnectParams) (VixDiskLibConnection, VddkError) {} 
 ```
 ### ConnectEx
 ```$xslt
 /**
- * Create a transport context to access disks 
- * belonging to a particular snapshot of a 
- * particular virtual machine. Using this transport 
- * context enables callers to open virtual disks 
- * using the most efficient data access protocol 
- * available for managed virtual machines, for 
- * improved I/O performance. If you use this call 
- * instead of Connect(), additional input parameters
- * transportmode and snapshotref should be given.
+ * 创建传输 context 以访问属于特定虚拟机的特定快照的磁盘。
+ * 使用此传输 context，调用者可以使用可用于托管虚拟机的最高效的数据访问协议来打开虚拟磁盘，从而提高 I/O 性能。 
+ * 如果您使用此调用而不是 Connect()，则应提供额外的输入参数 Transportmode 和 snapshotref。
  */
 func ConnectEx(appGlobal ConnectParams) (VixDiskLibConnection, VddkError) {}
 ```
@@ -123,14 +124,9 @@ func ConnectEx(appGlobal ConnectParams) (VixDiskLibConnection, VddkError) {}
 ### Create a local or remote disk
 ```$xslt
 /**
- * Locally creates a new virtual disk, after being 
- * connected to the host. In createParams, you must 
- * specify the disk type, adapter, hardware version, 
- * and capacity as a number of sectors. This 
- * function supports hosted disk. For managed disk, 
- * first create a hosted type virtual disk, then use 
- * Clone() to convert the virtual disk to managed 
- * disk.
+ * 连接到主机后，在本地创建一个新的虚拟磁盘。
+ * 在 createParams 中，您必须指定磁盘类型、适配器、硬件版本和容量（以扇区数表示）。
+ * 对于托管磁盘，首先创建托管类型虚拟磁盘，然后使用 Clone() 将虚拟磁盘转换为托管磁盘。
  */
 func Create(connection VixDiskLibConnection, path string, createParams VixDiskLibCreateParams, progressCallbackData string) VddkError {}
 ```
