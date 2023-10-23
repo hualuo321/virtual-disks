@@ -1,4 +1,14 @@
-# virtual-disks
+<a name="readme-top"></a>
+
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <a href="https://github.com/hualuo321/virtual-disks">
+    <img src="images/error404.png" alt="Logo" width="180" height="180">
+  </a>
+</div>
+
+# Virtual Disks
 
 Go Library for Virtual Disk Development Kit (a.k.a. virtual-disks) is a Golang 
 wrapper to access the VMware Virtual Disk Development Kit API (VDDK), which 
