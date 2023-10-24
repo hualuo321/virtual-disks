@@ -63,7 +63,7 @@ Centos:
 * zlib
 
 # Use cases
-Virtual-disks 提供对 virtual disks 的访问, 为应用程序供应商提供一系列用例，包括：
+Virtual-disks 提供对 virtual disks 的访问，为应用程序供应商提供一系列用例，包括：
 * 备份与虚拟机关联的特定卷或所有卷。
 * 获取 vmbk 文件的 IO Reader 和 Writer。
 * 将备份代理连接到 vSphere 并备份存储集群上的所有虚拟机。
@@ -94,6 +94,7 @@ Virtual-disks 提供对 virtual disks 的访问, 为应用程序供应商提供�
  */
 func Init(majorVersion uint32, minorVersion uint32, dir string) VddkError {}
 ```
+
 ### PrepareForAccess
 ```$xslt
 /**
@@ -102,6 +103,7 @@ func Init(majorVersion uint32, minorVersion uint32, dir string) VddkError {}
  */
 func PrepareForAccess(appGlobal ConnectParams) VddkError {}
 ```
+
 ### Connect
 ```$xslt
 /**
@@ -111,6 +113,7 @@ func PrepareForAccess(appGlobal ConnectParams) VddkError {}
  */
 func Connect(appGlobal ConnectParams) (VixDiskLibConnection, VddkError) {} 
 ```
+
 ### ConnectEx
 ```$xslt
 /**
