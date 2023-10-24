@@ -152,6 +152,7 @@ func Open(conn VixDiskLibConnection, params ConnectParams) (VixDiskLibHandle, Vd
 	var dli VixDiskLibHandle
 	filePath := C.CString(params.path)
 	defer C.free(unsafe.Pointer(filePath))
+	// 调用 C 库中的 Open 函数
 	res := C.Open(conn.conn, filePath, C.uint32(params.flag))
 	dli.dli = res.dli
 	if res.err != 0 {
@@ -160,10 +161,12 @@ func Open(conn VixDiskLibConnection, params ConnectParams) (VixDiskLibHandle, Vd
 	return dli, nil
 }
 
+// 结束虚拟磁盘的访问。
 func EndAccess(appGlobal ConnectParams) VddkError {
 	name := C.CString(appGlobal.identity)
 	defer C.free(unsafe.Pointer(name))
 	cnxParams, toFree := prepareConnectParams(appGlobal)
+	// 调用 C 库中的 VixDiskLib_EndAccess 函数
 	result := C.VixDiskLib_EndAccess(cnxParams, name)
 	freeParams(toFree)
 	if result != 0 {
@@ -172,6 +175,7 @@ func EndAccess(appGlobal ConnectParams) VddkError {
 	return nil
 }
 
+// 断开虚拟磁盘连接。
 func Disconnect(connection VixDiskLibConnection) VddkError {
 	res := C.VixDiskLib_Disconnect(connection.conn)
 	if res != 0 {
@@ -180,10 +184,12 @@ func Disconnect(connection VixDiskLibConnection) VddkError {
 	return nil
 }
 
+// 退出虚拟磁盘库。
 func Exit() {
 	C.VixDiskLib_Exit()
 }
 
+// 将子磁盘链附加到父磁盘链。
 func Attach(childHandle VixDiskLibHandle, parentHandle VixDiskLibHandle) VddkError {
 	res := C.VixDiskLib_Attach(childHandle.dli, parentHandle.dli)
 	if res != 0 {
@@ -192,6 +198,7 @@ func Attach(childHandle VixDiskLibHandle, parentHandle VixDiskLibHandle) VddkErr
 	return nil
 }
 
+// 检查或修复虚拟磁盘文件。
 func CheckRepair(connection VixDiskLibConnection, filename string, repair bool) VddkError {
 	file := C.CString(filename)
 	defer C.free(unsafe.Pointer(file))
@@ -202,6 +209,7 @@ func CheckRepair(connection VixDiskLibConnection, filename string, repair bool) 
 	return nil
 }
 
+// 清理虚拟磁盘连接。
 func Cleanup(appGlobal ConnectParams, numCleanUp uint32, numRemaining uint32) VddkError {
 	cnxParams, toFree := prepareConnectParams(appGlobal)
 	defer freeParams(toFree)
@@ -212,6 +220,7 @@ func Cleanup(appGlobal ConnectParams, numCleanUp uint32, numRemaining uint32) Vd
 	return nil
 }
 
+// 克隆虚拟磁盘。（目标虚拟磁盘的连接，目标虚拟磁盘的路径，源虚拟磁盘的连接，源虚拟磁盘的路径，虚拟磁盘的创建参数，进度回调数据，是否覆盖目标虚拟磁盘）
 func Clone(dstConnection VixDiskLibConnection, dstPath string, srcConnection VixDiskLibConnection, srcPath string,
 	params VixDiskLibCreateParams, progressCallbackData string, overWrite bool) VddkError {
 	dst := C.CString(dstPath)
@@ -228,6 +237,7 @@ func Clone(dstConnection VixDiskLibConnection, dstPath string, srcConnection Vix
 	return nil
 }
 
+// 准备虚拟磁盘的创建参数。（包含虚拟磁盘信息的参数结构体）
 func prepareCreateParams(createSpec VixDiskLibCreateParams) *C.VixDiskLibCreateParams {
 	var createParams *C.VixDiskLibCreateParams
 	createParams.diskType = C.VixDiskLibDiskType(createSpec.diskType)
@@ -237,12 +247,15 @@ func prepareCreateParams(createSpec VixDiskLibCreateParams) *C.VixDiskLibCreateP
 	return createParams
 }
 
+// 创建虚拟磁盘。
 func Create(connection VixDiskLibConnection, path string, createParams VixDiskLibCreateParams, progressCallbackData string) VddkError {
 	pathName := C.CString(path)
 	defer C.free(unsafe.Pointer(pathName))
+	// 准备虚拟磁盘的创建参数
 	createSpec := prepareCreateParams(createParams)
 	cstr := C.CString(progressCallbackData)
 	defer C.free(unsafe.Pointer(cstr))
+	// 创建虚拟磁盘
 	res := C.Create(connection.conn, pathName, createSpec, unsafe.Pointer(&cstr))
 	if res != 0 {
 		return NewVddkError(uint64(res), fmt.Sprintf("Create a virtual disk failed. The error code is %d.", res))
@@ -250,6 +263,7 @@ func Create(connection VixDiskLibConnection, path string, createParams VixDiskLi
 	return nil
 }
 
+// 创建虚拟磁盘的子磁盘。（虚拟磁盘的句柄，子磁盘的路径，子磁盘的类型，进度回调数据）
 func CreateChild(diskHandle VixDiskLibHandle, childPath string, diskType VixDiskLibDiskType, progressCallbackData string) VddkError {
 	child := C.CString(childPath)
 	defer C.free(unsafe.Pointer(child))
@@ -262,6 +276,7 @@ func CreateChild(diskHandle VixDiskLibHandle, childPath string, diskType VixDisk
 	return nil
 }
 
+// 创建虚拟磁盘信息的 C 语言结构体。
 func createDiskInfo(diskInfo *VixDiskLibInfo) (*C.VixDiskLibInfo, []*C.char) {
 	var dliInfo *C.VixDiskLibInfo
 	var bios C.VixDiskLibGeometry
@@ -283,6 +298,7 @@ func createDiskInfo(diskInfo *VixDiskLibInfo) (*C.VixDiskLibInfo, []*C.char) {
 	return dliInfo, cParams
 }
 
+// 扩展虚拟磁盘的容量。
 func Grow(connection VixDiskLibConnection, path string, capacity VixDiskLibSectorType, updateGeometry bool, callbackData string) VddkError {
 	filePath := C.CString(path)
 	defer C.free(unsafe.Pointer(filePath))
@@ -295,12 +311,14 @@ func Grow(connection VixDiskLibConnection, path string, capacity VixDiskLibSecto
 	return nil
 }
 
+// 列出支持的传输模式。
 func ListTransportModes() string {
 	res := C.VixDiskLib_ListTransportModes()
 	modes := C.GoString(res)
 	return modes
 }
 
+// 重命名虚拟磁盘文件。
 func Rename(srcFileName string, dstFileName string) VddkError {
 	src := C.CString(srcFileName)
 	defer C.free(unsafe.Pointer(src))
@@ -313,6 +331,7 @@ func Rename(srcFileName string, dstFileName string) VddkError {
 	return nil
 }
 
+// 获取克隆操作所需的空间大小。
 func SpaceNeededForClone(srcHandle VixDiskLibHandle, diskType VixDiskLibDiskType, spaceNeeded uint64) VddkError {
 	space := C.uint64(spaceNeeded)
 	res := C.VixDiskLib_SpaceNeededForClone(srcHandle.dli, C.VixDiskLibDiskType(diskType), &space)
@@ -322,6 +341,7 @@ func SpaceNeededForClone(srcHandle VixDiskLibHandle, diskType VixDiskLibDiskType
 	return nil
 }
 
+// 删除虚拟磁盘文件，包括所有的扩展。
 func Unlink(connection VixDiskLibConnection, path string) VddkError {
 	delete := C.CString(path)
 	defer C.free(unsafe.Pointer(delete))
@@ -332,6 +352,7 @@ func Unlink(connection VixDiskLibConnection, path string) VddkError {
 	return nil
 }
 
+// 收缩虚拟磁盘的容量。
 func Shrink(diskHandle VixDiskLibHandle, progressCallbackData string) VddkError {
 	cstr := C.CString(progressCallbackData)
 	defer C.free(unsafe.Pointer(cstr))
@@ -342,6 +363,7 @@ func Shrink(diskHandle VixDiskLibHandle, progressCallbackData string) VddkError 
 	return nil
 }
 
+// 对虚拟磁盘执行碎片整理。
 func Defragment(diskHandle VixDiskLibHandle, progressCallbackData string) VddkError {
 	cstr := C.CString(progressCallbackData)
 	defer C.free(unsafe.Pointer(cstr))
@@ -352,12 +374,14 @@ func Defragment(diskHandle VixDiskLibHandle, progressCallbackData string) VddkEr
 	return nil
 }
 
+// 获取虚拟磁盘的传输模式。
 func GetTransportMode(diskHandle VixDiskLibHandle) string {
 	res := C.VixDiskLib_GetTransportMode(diskHandle.dli)
 	mode := C.GoString(res)
 	return mode
 }
 
+// 获取虚拟磁盘的元数据键。
 func GetMetadataKeys(diskHandle VixDiskLibHandle, buf []byte, bufLen uint, requireLen uint) VddkError {
 	cbuf := ((*C.char)(unsafe.Pointer(&buf[0])))
 	res := C.GetMetadataKeys(diskHandle.dli, cbuf, C.size_t(bufLen), C.size_t(requireLen))
@@ -367,6 +391,7 @@ func GetMetadataKeys(diskHandle VixDiskLibHandle, buf []byte, bufLen uint, requi
 	return nil
 }
 
+// 关闭虚拟磁盘句柄，释放相关资源。
 func Close(diskHandle VixDiskLibHandle) VddkError {
 	res := C.VixDiskLib_Close(diskHandle.dli)
 	if res != 0 {
@@ -375,6 +400,7 @@ func Close(diskHandle VixDiskLibHandle) VddkError {
 	return nil
 }
 
+// 写入虚拟磁盘的元数据。
 func WriteMetadata(diskHandle VixDiskLibHandle, key string, val string) VddkError {
 	w_key := C.CString(key)
 	defer C.free(unsafe.Pointer(w_key))
@@ -387,6 +413,7 @@ func WriteMetadata(diskHandle VixDiskLibHandle, key string, val string) VddkErro
 	return nil
 }
 
+// 从虚拟磁盘中读取元数据。
 func ReadMetadata(diskHandle VixDiskLibHandle, key string, buf []byte, bufLen uint, requiredLen uint) VddkError {
 	readKey := C.CString(key)
 	defer C.free(unsafe.Pointer(readKey))
@@ -399,6 +426,7 @@ func ReadMetadata(diskHandle VixDiskLibHandle, key string, buf []byte, bufLen ui
 	return nil
 }
 
+// 从虚拟磁盘中读取数据。
 func Read(diskHandle VixDiskLibHandle, startSector uint64, numSectors uint64, buf []byte) VddkError {
 	cbuf := ((*C.uint8)(unsafe.Pointer(&buf[0])))
 	res := C.VixDiskLib_Read(diskHandle.dli, C.VixDiskLibSectorType(startSector), C.VixDiskLibSectorType(numSectors), cbuf)
@@ -408,6 +436,7 @@ func Read(diskHandle VixDiskLibHandle, startSector uint64, numSectors uint64, bu
 	return nil
 }
 
+// 向虚拟磁盘中写入数据。
 func Write(diskHandle VixDiskLibHandle, startSector uint64, numSectors uint64, buf []byte) VddkError {
 	cbuf := ((*C.uint8)(unsafe.Pointer(&buf[0])))
 	res := C.VixDiskLib_Write(diskHandle.dli, C.VixDiskLibSectorType(startSector), C.VixDiskLibSectorType(numSectors), cbuf)
@@ -417,6 +446,7 @@ func Write(diskHandle VixDiskLibHandle, startSector uint64, numSectors uint64, b
 	return nil
 }
 
+// 获取虚拟磁盘的信息，如容量、几何信息等。
 func GetInfo(diskHandle VixDiskLibHandle) (VixDiskLibInfo, VddkError) {
 	var dliInfoPtr *C.VixDiskLibInfo
 	res := C.VixDiskLib_GetInfo(diskHandle.dli, &dliInfoPtr)
@@ -445,7 +475,7 @@ func GetInfo(diskHandle VixDiskLibHandle) (VixDiskLibInfo, VddkError) {
 	return retInfo, nil
 }
 
-// QueryAllocatedBlocks invokes the related VDDK function.
+// 查询虚拟磁盘中已分配的块。
 func QueryAllocatedBlocks(diskHandle VixDiskLibHandle, startSector VixDiskLibSectorType, numSectors VixDiskLibSectorType, chunkSize VixDiskLibSectorType) ([]VixDiskLibBlock, VddkError) {
 	ss := C.VixDiskLibSectorType(startSector)
 	ns := C.VixDiskLibSectorType(numSectors)
