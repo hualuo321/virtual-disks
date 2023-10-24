@@ -5,7 +5,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"							// 用于日志记录
+	"github.com/sirupsen/logrus"					// 用于日志记录
 	"github.com/vmware/virtual-disks/pkg/disklib"			// 自定义的虚拟磁盘低级 API 库
 	"github.com/vmware/virtual-disks/pkg/virtual_disks"		// 自定义的虚拟磁盘高级 API 库
 	"os"
