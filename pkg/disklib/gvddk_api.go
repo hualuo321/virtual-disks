@@ -1,20 +1,7 @@
-/*
-Copyright (c) 2018-2021 the Go Library for Virtual Disk Development Kit contributors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 
 package disklib
+// #cgo 指令用于配置与C语言的互操作性
+// LDFLAGS 用于指定链接器标志，CFLAGS 用于指定编译器标志
 
 // #cgo LDFLAGS: -L/usr/local/vmware-vix-disklib-distrib/lib64 -lvixDiskLib
 // #cgo CFLAGS: -I/usr/local/vmware-vix-disklib-distrib/include
@@ -25,14 +12,19 @@ import (
 	"unsafe"
 )
 
+//export GoLogWarn 是一个导出的C函数，用于在Go中记录警告信息
 //export GoLogWarn
 func GoLogWarn(buf *C.char) {
 	fmt.Println(C.GoString(buf))
 }
 
+// Init 函数用于初始化虚拟磁盘库（虚拟磁盘库主版本号，次版本号，库路径）
 func Init(majorVersion uint32, minorVersion uint32, dir string) VddkError {
+	// 将 Go 字符串转换为 C 字符串
 	libDir := C.CString(dir)
+	// 延迟，用于释放字符串内存
 	defer C.free(unsafe.Pointer(libDir))
+	// 调用 C 库中的初始化函数，返回错误码
 	result := C.Init(C.uint32(majorVersion), C.uint32(minorVersion), libDir)
 	if result != 0 {
 		return NewVddkError(uint64(result), fmt.Sprintf("Initialize failed. The error code is %d.", result))
@@ -40,26 +32,30 @@ func Init(majorVersion uint32, minorVersion uint32, dir string) VddkError {
 	return nil
 }
 
+// InitEx 函数类似于 Init，但还接受配置文件作为参数（虚拟磁盘库主版本号，次版本号，库路径，配置文件路径）
 func InitEx(majorVersion uint32, minorVersion uint32, dir string, configFile string) VddkError {
 	var result C.VixError
 	libDir := C.CString(dir)
 	defer C.free(unsafe.Pointer(libDir))
 	if configFile == "" {
+		// 如果 configFile 为空，则执行与 Init 函数相同的初始化操作。
 		result = C.Init(C.uint32(majorVersion), C.uint32(minorVersion), libDir)
 	} else {
+		// 如果提供了配置文件，调用 C.InitEx 函数执行初始化。
 		config := C.CString(configFile)
 		defer C.free(unsafe.Pointer(config))
 		result = C.InitEx(C.uint32(majorVersion), C.uint32(minorVersion), libDir, config)
 	}
-
+	// 判断是否初始化成功
 	if result != 0 {
 		return NewVddkError(uint64(result), fmt.Sprintf("Initialize failed. The error code is %d.", result))
 	}
 	return nil
 }
 
+// prepareConnectParams 函数用于准备连接虚拟磁盘所需的参数（全局参数）（指向连接参数的指针，全局参数的切片）
 func prepareConnectParams(appGlobal ConnectParams) (*C.VixDiskLibConnectParams, []*C.char) {
-	// Trans string to CString
+	// 将 Go 字符串转换为 C 字符串
 	vmxSpec := C.CString(appGlobal.vmxSpec)
 	serverName := C.CString(appGlobal.serverName)
 	thumbPrint := C.CString(appGlobal.thumbPrint)
@@ -69,9 +65,11 @@ func prepareConnectParams(appGlobal ConnectParams) (*C.VixDiskLibConnectParams, 
 	ds := C.CString(appGlobal.ds)
 	fcdssId := C.CString(appGlobal.fcdssId)
 	cookie := C.CString(appGlobal.cookie)
+	// 将上述 C 字符串添加到切片中
 	var cParams = []*C.char{vmxSpec, serverName, thumbPrint, userName, password, fcdId, ds, fcdssId, cookie}
-	// Construct connparams which can be c wrapper used directly
+	// 创建一个连接参数结构体的指针 cnxParams，并分配内存
 	var cnxParams *C.VixDiskLibConnectParams = C.VixDiskLib_AllocateConnectParams()
+	// 根据 appGlobal 中的参数，设置 cnxParams 结构体的各个字段，以构造连接参数。
 	if appGlobal.fcdId != "" {
 		cnxParams.specType = C.VIXDISKLIB_SPEC_VSTORAGE_OBJECT
 		C.Params_helper(cnxParams, fcdId, ds, fcdssId, true, false)
@@ -88,9 +86,11 @@ func prepareConnectParams(appGlobal ConnectParams) (*C.VixDiskLibConnectParams, 
 		cnxParams.credType = C.VIXDISKLIB_CRED_SESSIONID
 		C.Params_helper(cnxParams, cookie, userName, password, false, true)
 	}
+	// 将 cnxParams 和 cParams 返回，以便在调用方使用它们进行虚拟磁盘连接。
 	return cnxParams, cParams
 }
 
+// freeParams 函数用于释放 C 字符串数组。（参数切片）
 func freeParams(params []*C.char) {
 	for i, _ := range params {
 		C.free(unsafe.Pointer(params[i]))
@@ -98,45 +98,57 @@ func freeParams(params []*C.char) {
 	return
 }
 
+// Connect 函数用于连接虚拟磁盘。（连接参数）（虚拟磁盘连接信息对象，错误码）
 func Connect(appGlobal ConnectParams) (VixDiskLibConnection, VddkError) {
 	var connection VixDiskLibConnection
+	// 准备连接虚拟磁盘所需的参数。这个函数会返回指向连接参数的指针 cnxParams 和全局参数的切片 toFree。
 	cnxParams, toFree := prepareConnectParams(appGlobal)
 	defer freeParams(toFree)
+	// 利用连接参数 cnxParams ，连接对象的指针 &connection.conn 尝试连接
 	err := C.Connect(cnxParams, &connection.conn)
 	if err != 0 {
 		return VixDiskLibConnection{}, NewVddkError(uint64(err), fmt.Sprintf("Connect failed. The error code is %d.", err))
 	}
-
+	// 如果连接成功，则返回一个 VixDiskLibConnection 对象，其中包含了连接的相关信息。
 	return connection, nil
 }
 
+// ConnectEx 函数类似于 Connect，但还接受连接模式作为参数。（连接参数）（虚拟磁盘连接信息对象，错误码）
 func ConnectEx(appGlobal ConnectParams) (VixDiskLibConnection, VddkError) {
 	var connection VixDiskLibConnection
 	cnxParams, toFree := prepareConnectParams(appGlobal)
 	defer freeParams(toFree)
 	modes := C.CString(appGlobal.mode)
 	defer C.free(unsafe.Pointer(modes))
+	// 传递连接参数 cnxParams、只读标志 readOnly、连接模式 modes，以及连接对象的指针 &connection.conn。
 	err := C.ConnectEx(cnxParams, C._Bool(appGlobal.readOnly), modes, &connection.conn)
 	if err != 0 {
 		return VixDiskLibConnection{}, NewVddkError(uint64(err), fmt.Sprintf("ConnectEx failed. The error code is %d.", err))
 	}
-
+	// 如果连接成功，则返回一个 VixDiskLibConnection 对象，其中包含了连接的相关信息。
 	return connection, nil
 }
 
+// PrepareForAccess 准备虚拟磁盘以进行访问。（全局参数）
 func PrepareForAccess(appGlobal ConnectParams) VddkError {
+	// 将 Go 字符串转换为 C 字符串
 	name := C.CString(appGlobal.identity)
 	defer C.free(unsafe.Pointer(name))
+	// 获取连接参数
 	cnxParams, toFree := prepareConnectParams(appGlobal)
 	defer freeParams(toFree)
+	// 调用 C 库中的 PrepareForAccess 函数
 	result := C.PrepareForAccess(cnxParams, name)
 	if result != 0 {
 		return NewVddkError(uint64(result), fmt.Sprintf("Prepare for access failed. The error code is %d.", result))
 	}
+	// 准备访问操作成功
 	return nil
 }
 
+// open 打开虚拟磁盘。（虚拟磁盘连接信息，连接参数）（虚拟磁盘句柄）
 func Open(conn VixDiskLibConnection, params ConnectParams) (VixDiskLibHandle, VddkError) {
+	// 虚拟磁盘句柄，用于表示对虚拟磁盘文件的操作，如打开、读取、写入、关闭等。
 	var dli VixDiskLibHandle
 	filePath := C.CString(params.path)
 	defer C.free(unsafe.Pointer(filePath))
