@@ -25,7 +25,7 @@ func TestOpen(t *testing.T) {
 	}
 	// 初始化磁盘库：需要版本号和库路径
 	disklib.Init(majorVersion, minorVersion, path)
-	// 从环境变量中获取连接参数
+	// 从环境变量中获取连接参数	
 	serverName := os.Getenv("IP")					// IP
 	thumPrint := os.Getenv("THUMBPRINT")			// 指纹
 	userName := os.Getenv("USERNAME")				// 用户名
