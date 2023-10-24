@@ -1,4 +1,3 @@
-
 package disklib
 // #cgo 指令用于配置与C语言的互操作性
 // LDFLAGS 用于指定链接器标志，CFLAGS 用于指定编译器标志
