@@ -27,10 +27,10 @@ func TestOpen(t *testing.T) {
 	disklib.Init(majorVersion, minorVersion, path)
 	// 从环境变量中获取连接参数	
 	serverName := os.Getenv("IP")					// IP
-	thumPrint := os.Getenv("THUMBPRINT")			// 指纹
+	thumPrint := os.Getenv("THUMBPRINT")				// 指纹
 	userName := os.Getenv("USERNAME")				// 用户名
 	password := os.Getenv("PASSWORD")				// 密码
-	fcdId := os.Getenv("FCDID")						// FCD 是一个独立于虚拟机的磁盘，允许管理员直接管理操作没有与 VMware 关联的 VMDK。
+	fcdId := os.Getenv("FCDID")					// FCD 是一个独立于虚拟机的磁盘，允许管理员直接管理操作没有与 VMware 关联的 VMDK。
 	ds := os.Getenv("DATASTORE")					// 用于存储 VMware 虚拟机的资源的存储位置。
 	identity := os.Getenv("IDENTITY")				// 标识
 	params := disklib.NewConnectParams("", serverName,thumPrint, userName,
