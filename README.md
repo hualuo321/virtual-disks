@@ -131,82 +131,107 @@ func ConnectEx(appGlobal ConnectParams) (VixDiskLibConnection, VddkError) {}
 func Create(connection VixDiskLibConnection, path string, createParams VixDiskLibCreateParams, progressCallbackData string) VddkError {}
 ```
 ### Open a local or remote disk
-After the library connects to a workstation or server, Open opens a virtual disk. With SAN or HotAdd transport, opening a remote disk for writing requires a pre-existing snapshot. Use different open flags to modify the open instruction:
-* VIXDISKLIB_FLAG_OPEN_UNBUFFERED – Disable host disk caching.
-* VIXDISKLIB_FLAG_OPEN_SINGLE_LINK – Open the current link, not the entire chain (hosted disk only).
-* VIXDISKLIB_FLAG_OPEN_READ_ONLY – Open the virtual disk read-only.
-* VIXDISKLIB_FLAG_OPEN_COMPRESSION_ZLIB – Open for NBDSSL transport, zlib compression.
-* VIXDISKLIB_FLAG_OPEN_COMPRESSION_FASTLZ – Open for NBDSSL transport, fastlz compression.
-* VIXDISKLIB_FLAG_OPEN_COMPRESSION_SKIPZ – Open for NBDSSL transport, skipz compression.
-
-Should have a matching VixDiskLib_Close.
+库连接到工作站或服务器后，Open 将打开虚拟磁盘。 使用 SAN 或 HotAdd 传输，打开远程磁盘进行写入需要预先存在的快照。使用不同的打开标志来修改打开指令：
+* VIXDISKLIB_FLAG_OPEN_UNBUFFERED – 禁用主机磁盘缓存。
+* VIXDISKLIB_FLAG_OPEN_SINGLE_LINK – 打开当前链接，而不是整个链（仅限托管磁盘）。
+* VIXDISKLIB_FLAG_OPEN_READ_ONLY – 以只读方式打开虚拟磁盘。
+* VIXDISKLIB_FLAG_OPEN_COMPRESSION_ZLIB – 开放 NBDSSL 传输、zlib 压缩。
+* VIXDISKLIB_FLAG_OPEN_COMPRESSION_FASTLZ – 开放 NBDSSL 传输、fastlz 压缩。
+* VIXDISKLIB_FLAG_OPEN_COMPRESSION_SKIPZ – 开放 NBDSSL 传输、skipz 压缩。
+应该有一个匹配的 VixDiskLib Close。
 ```$xslt
 /**
- * Opens a virtual disk.
+ * 打开虚拟磁盘。
  */
 func Open(conn VixDiskLibConnection, params ConnectParams) (VixDiskLibHandle, VddkError) {}
 ```
+
+托管磁盘与非托管磁盘：
+1. 管理：
+	- 托管磁盘是由云服务提供商（如 Azure，Google Cloud 等）全面托管和管理的。这包括磁盘的创建，备份，快照及恢复等任务。用户只需要关注磁盘的使用，而无需担心低层基础设施。
+	- 非托管磁盘需要用户自己来管理。这包括磁盘的创建，备份，快照及恢复等任务。用户需要更多的自定义和维护工作。
+2. 部署：
+	- 托管磁盘部署简单，只需要选择磁盘类型，容量和性能级别，然后将其附加到虚拟机或云实例。
+	- 非托管磁盘需要用户自行创建和管理虚拟磁盘，包括存储账号设置，网络连接和磁盘配置。
+3. 备份和快照：
+	- 托管磁盘通常具有集成的备份和快照功能，使用户能够轻松创建、管理和还原备份以及生成快照。
+	- 非托管磁盘用户需要自己设置备份策略和手动创建磁盘快照。
+4. 灾难恢复：
+	- 托管磁盘通常支持跨数据中心和区域的数据冗余和灾难恢复功能，提供更高的数据可用性。
+	- 非托管磁盘用户需要自行设计和实施跨区域的灾难恢复策略。
+
 ### Read and Write disk IO
 ```$xslt
 /**
- * This function reads a range of sectors from an open virtual disk.
+ * 此函数从打开的虚拟磁盘读取一系列扇区。
  */
 func Read(diskHandle VixDiskLibHandle, startSector uint64, numSectors uint64, buf []byte) VddkError {}
 ```
 ```$xslt
 /**
- * This function writes to an open virtual disk.
+ * 此函数写入打开的虚拟磁盘。
  */
 func Write(diskHandle VixDiskLibHandle, startSector uint64, numSectors uint64, buf []byte) VddkError {}
 ```
 ### Metadata handling
 ```$xslt
 /**
- * Read Metadata key from disk.
+ * 从磁盘读取元数据键。
  */
 func ReadMetadata(diskHandle VixDiskLibHandle, key string, buf []byte, bufLen uint, requiredLen uint) VddkError {}
 ```
 ```$xslt
 /**
- * Get metadata table from disk.
+ * 从磁盘获取元数据表。
  */
 func GetMetadataKeys(diskHandle VixDiskLibHandle, buf []byte, bufLen uint, requireLen uint) VddkError {}
 ```
 ```$xslt
 /**
- * Write metadata table to disk.
+ * 将元数据表写入磁盘。
  */
 func WriteMetadata(diskHandle VixDiskLibHandle, key string, val string) VddkError {}
 ```
+
+在云计算环境中，当连接虚拟磁盘（无论是托管磁盘还是非托管磁盘）到虚拟机或云实例时，通常可以获取关于这个磁盘的一些元数据（metadata）。这些元数据包括有关磁盘的信息，以帮助使用者管理和使用磁盘。
+- 磁盘ID：磁盘在云平台中的唯一标识符，用于标识特定磁盘。
+- 磁盘大小：元数据通常包括磁盘的容量，以便您知道磁盘可以存储多少数据。
+- 磁盘类型：这指的是磁盘的种类，例如标准硬盘、SSD等。
+- 创建时间：您可以查看磁盘创建的日期和时间，以了解磁盘的生命周期。
+- 挂载点：如果磁盘已经挂载到虚拟机或云实例上，元数据可能包括挂载点的信息。
+- 操作系统信息：有关虚拟机操作系统的信息，帮助确定磁盘是否包含操作系统数据。
+- 状态信息：获取有关磁盘的状态信息，如是否在线、是否附加到虚拟机等。
+- 备份和快照信息：若磁盘的备份或快照数据可用，元数据可能包括相关信息，如备份策略和快照时间戳。
+
 ### Block allocation
 ```$xslt
 /**
- * Determine allocated blocks.
+ * 确定分配的块。
  */
 func QueryAllocatedBlocks(diskHandle VixDiskLibHandle, startSector VixDiskLibSectorType, numSectors VixDiskLibSectorType, chunkSize VixDiskLibSectorType) ([]VixDiskLibBlock, VddkError) {}
 ```
 ## Shut down
-All virtual disk api applications should call these functions at the end of program.
+所有虚拟磁盘 API 应用程序都应在程序结束时调用这些函数。
+
 ### Disconnect
 ```$xslt
 /**
- * Destroy the connection. Match to Connect.
+ * 关闭连接。与 Connect 匹配。
  */
 func Disconnect(connection VixDiskLibConnection) VddkError {}
 ```
 ### EndAccess
 ```$xslt
 /**
- * Notifies the host that a virtual machine’s disk have been closed, so operations that 
- * rely on the virtual disks to be closed, such as vMotion, can now be allowed. Internally
- * this function re-enables the vSphere API method RelocateVM_Task.
+ * 通知主机虚拟机磁盘已关闭，因此现在可以允许依赖于要关闭的虚拟磁盘的操作，例如 vMotion。
+ * 该函数在内部重新启用 vSphere API 方法 RelocateVM_Task。
  */
 func EndAccess(appGlobal ConnectParams) VddkError {}
 ```
 ### Exit
 ```$xslt
 /** 
- * Releases all resources held by VixDiskLib.
+ * 释放 VixDiskLib 持有的所有资源。
  */
 func Exit() {}
 ```
@@ -215,62 +240,54 @@ func Exit() {}
 ### Open
 ```$xslt
 /**
- * Will handle the set up operations for a disk, 
- * including prepare for access, connect, open. If 
- * failure happens in the set up stage, will roll 
- * back to initial state. Return a DiskReaderWriter 
- * which allows read or write operations to the 
- * disk.
+ * 将处理磁盘的设置操作，包括准备访问、连接、打开。如果在设置阶段发生故障，将回滚到初始状态。
+ * 返回一个允许对磁盘进行读或写操作的 DiskReaderWriter。
  */
-func Open(globalParams disklib.ConnectParams, logger logrus.FieldLogger) 
-                  (DiskReaderWriter, disklib.VddkError) {}
+func Open(globalParams disklib.ConnectParams, logger logrus.FieldLogger) (DiskReaderWriter, disklib.VddkError) {}
 ```
 ### Read
 ```$xslt
 /**
- * Read reads up to len(p) bytes into p. It returns 
- * the number of bytes read (0 <= n <= len(p)) and 
- * any error encountered.
+ * Read 将最多 len(p) 个字节读取到 p 中。它返回读取的字节数 (0 <= n <= len(p)) 以及遇到的任何错误。
  */
 func (this DiskReaderWriter) Read(p []byte) (n int, err error) {}
 ```
 ### ReadAt
 ```$xslt
 /** 
- * Read from given offset.
+ * 从给定的偏移量读取。
  */
 func (this DiskReaderWriter) ReadAt(p []byte, off int64) (n int, err error) {}
 ```
 ### Write
 ```$xslt
 /**
- * Write writes len(p) bytes from p to the 
- * underlying data stream. It returns the number of 
- * bytes written from p (0 <= n <= len(p)).
+ * Write 将 p 中的 len(p) 个字节写入底层数据流。 它返回从 p (0 <= n <= len(p)) 写入的字节数。
  */
 func (this DiskReaderWriter) Write(p []byte) (n int, err error) {}
 ```
 ### WriteAt
 ```$xslt
 /**
- * Write from given offset.
+ * 从给定的偏移量写入。
  */
 func (this DiskConnectHandle) WriteAt(p []byte, off int64) (n int, err error) {}
 ```
 ### Block allocation
 ```$xslt
 /**
- * Determine allocated blocks.
+ * 确定分配的块。
  */
 func (this DiskReaderWriter) QueryAllocatedBlocks(startSector disklib.VixDiskLibSectorType, numSectors disklib.VixDiskLibSectorType, chunkSize disklib.VixDiskLibSectorType) ([]disklib.VixDiskLibBlock, disklib.VddkError) {}
 ```
 ### Close
 ```$xslt
 /**
- * Clear up all the resources held. Should be called in the end.
+ * 清理所有持有的资源。最后应该调用该函数。
  */
 func (this DiskReaderWriter) Close() error {} 
 ```
+
 ## Data structure
 ### DiskReaderWriter
 ```$xslt
@@ -279,17 +296,7 @@ type DiskReaderWriter struct {
 	writerAt io.WriterAt
 	closer   io.Closer
 	offset  *int64
-	mutex    sync.Mutex                                                                
+	mutex    sync.Mutex                                                     
 	logger   logrus.FieldLogger
 }
 ```
-
-# Contributing
-
-The Go Library for Virtual Disk Development Kit project team welcomes 
-contributions from the community. If you wish to contribute code and you 
-have not signed our contributor license agreement (CLA), our bot will update 
-the issue when you open a Pull Request. For any questions about the CLA 
-process, please refer to our [FAQ](https://cla.vmware.com/faq).
-
-For additional info on contributing, please see CONTRIBUTING.md
