@@ -225,7 +225,6 @@ func GetThumbPrintForServer(host string, port string) (string, error) {
 	} else {
 		address = host
 	}
-
 	config := tls.Config{
 		InsecureSkipVerify: true, // Skip verify so we can get the thumbprint from any server
 	}

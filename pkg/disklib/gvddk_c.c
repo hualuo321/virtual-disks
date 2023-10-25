@@ -1,42 +1,49 @@
 #include "gvddk_c.h"
 #include <string.h>
 
+// 日志记录函数
 void LogFunc(const char *fmt, va_list args)
 {
-    char *buf = malloc(1024);
+    char *buf = malloc(1024);           // 这里创建了一个缓冲区并使用 sprintf 格式化日志消息。
     sprintf(buf, fmt, args);
-    GoLogWarn(buf);
+    GoLogWarn(buf);                     // GoLogWarn 应该是 Go 中的记录日志的函数。
 }
 
+// ProgressFunc 函数用于处理进度回调。在此只是简单地返回true。
 bool ProgressFunc(void *progressData, int percentCompleted)
 {
     return true;
 }
 
+// Init函数用于初始化VixDiskLib库。
 VixError Init(uint32 major, uint32 minor, char* libDir)
 {
     VixError result = VixDiskLib_Init(major, minor, NULL, NULL, NULL, libDir);
     return result;
 }
 
+// 带额外信息的初始化
 VixError InitEx(uint32 major, uint32 minor, char* libDir, char* configFile)
 {
     VixError result = VixDiskLib_InitEx(major, minor, NULL, NULL, NULL, libDir, configFile);
     return result;
 }
 
+// 连接虚拟磁盘
 VixError Connect(VixDiskLibConnectParams *cnxParams, VixDiskLibConnection *connection) {
     VixError vixError;
     vixError = VixDiskLib_Connect(cnxParams, connection);
     return vixError;
 }
 
+// 带额外信息的连接虚拟磁盘
 VixError ConnectEx(VixDiskLibConnectParams *cnxParams, bool readOnly, char* transportModes, VixDiskLibConnection *connection) {
     VixError vixError;
     vixError = VixDiskLib_ConnectEx(cnxParams, readOnly, "", transportModes, connection);
     return vixError;
 }
 
+// 打开磁盘
 DiskHandle Open(VixDiskLibConnection conn, char* path, uint32 flags)
 {
     VixDiskLibHandle diskHandle;
@@ -48,11 +55,13 @@ DiskHandle Open(VixDiskLibConnection conn, char* path, uint32 flags)
     return myDli;
 }
 
+// 为连接磁盘准备数据
 VixError PrepareForAccess(VixDiskLibConnectParams *cnxParams, char* identity)
 {
     return VixDiskLib_PrepareForAccess(cnxParams, identity);
 }
 
+// 参数帮助
 void Params_helper(VixDiskLibConnectParams *cnxParams, char* arg1, char* arg2, char* arg3, bool isFcd, bool isSession) {
     if (isFcd)
     {
