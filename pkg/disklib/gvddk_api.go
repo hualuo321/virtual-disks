@@ -362,7 +362,7 @@ func Shrink(diskHandle VixDiskLibHandle, progressCallbackData string) VddkError 
 	return nil
 }
 
-// 对虚拟磁盘执行碎片整理。
+// 对虚拟磁盘执行碎片整理。#################
 func Defragment(diskHandle VixDiskLibHandle, progressCallbackData string) VddkError {
 	cstr := C.CString(progressCallbackData)
 	defer C.free(unsafe.Pointer(cstr))
